@@ -8,7 +8,6 @@
 
 ---
 
-[![Version](https://img.shields.io/visual-studio-marketplace/v/henriqueBruno.github-repository-manager)](https://marketplace.visualstudio.com/items?itemName=henriqueBruno.github-repository-manager)
 [![Installs](https://img.shields.io/visual-studio-marketplace/i/henriqueBruno.github-repository-manager)](https://marketplace.visualstudio.com/items?itemName=henriqueBruno.github-repository-manager)
 
 </div>
