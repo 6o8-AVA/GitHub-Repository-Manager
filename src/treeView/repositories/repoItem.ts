@@ -34,6 +34,37 @@ const dirtyToMessage: Record<Dirtiness, string> = {
   unknown: 'Checking if it\'s dirty...',
 
 };
+
+const relativeTimeFormatter = new Intl.RelativeTimeFormat(undefined, { numeric: 'auto' });
+const relativeTimeUnits: [Intl.RelativeTimeFormatUnit, number][] = [
+  ['year', 1000 * 60 * 60 * 24 * 365],
+  ['month', 1000 * 60 * 60 * 24 * 30],
+  ['week', 1000 * 60 * 60 * 24 * 7],
+  ['day', 1000 * 60 * 60 * 24],
+  ['hour', 1000 * 60 * 60],
+  ['minute', 1000 * 60],
+  ['second', 1000],
+];
+
+function getRelativeUpdatedText(repo: Repository): string | undefined {
+  if (repo.type !== 'remote')
+    return undefined;
+
+  const updatedAt = repo.updatedAt;
+  const updatedAtTime = updatedAt.getTime();
+  if (Number.isNaN(updatedAtTime))
+    return undefined;
+
+  const diff = updatedAtTime - Date.now();
+
+  for (const [unit, unitMs] of relativeTimeUnits) {
+    const value = diff / unitMs;
+    if (Math.abs(value) >= 1 || unit === 'second')
+      return `Updated ${relativeTimeFormatter.format(Math.round(value), unit)}`;
+  }
+
+  return undefined;
+}
 // + (repo.isTemplate ? ' | Template' : '') //TODO
 function getTooltip(repo: Repository) {
   // TODO Maybe for windows it requires regex escape?
@@ -80,11 +111,18 @@ export class RepoItem extends TreeItem {
   constructor({ repo, command, includeOwner, ...rest }: RepoItemConstructor) {
     const repoName = includeOwner ? `${repo.ownerLogin} / ${repo.name}` : repo.name;
 
-    let description = '';
-    // if (Math.random() > 0.8) // Favorite
-    //   description += 'F ';
-    if (repo.dirty)
-      description += dirtyToChar[repo.dirty];
+    const descriptionParts: string[] = [];
+    const relativeUpdated = getRelativeUpdatedText(repo);
+    if (relativeUpdated)
+      descriptionParts.push(relativeUpdated);
+
+    if (repo.dirty) {
+      const dirtyIndicator = dirtyToChar[repo.dirty];
+      if (dirtyIndicator)
+        descriptionParts.push(dirtyIndicator);
+    }
+
+    const description = descriptionParts.join(' • ');
 
     super({
       label: repoName,
