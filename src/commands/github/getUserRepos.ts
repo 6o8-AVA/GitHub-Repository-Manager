@@ -22,9 +22,10 @@ export async function getUserRepos(): Promise<Repository[]> {
         after: endCursor,
       }) as any).viewer.repositories;
 
-      ({ endCursor, hasNextPage } = pageInfo);
+  ({ endCursor, hasNextPage } = pageInfo);
 
-      repos.push(...nodes.map((node: any) => extractRepositoryFromData(node)));
+  const activeRepos = nodes.filter((node: any) => !node.isArchived);
+  repos.push(...activeRepos.map((node: any) => extractRepositoryFromData(node)));
     } while (hasNextPage);
 
     return repos;

@@ -45,6 +45,7 @@ url
 isPrivate
 isFork
 isTemplate
+isArchived
 parent {
   name
   owner {
@@ -74,9 +75,11 @@ export async function getOrgRepos(login: string): Promise<Repository[]> {
       if (response.viewer.organization === null)
         return repos;
 
-      const { nodes, pageInfo } = response.viewer.organization.repositories;
-      ({ endCursor, hasNextPage } = pageInfo);
-      repos.push(...nodes.map((node: any) => extractRepositoryFromData(node)));
+  const { nodes, pageInfo } = response.viewer.organization.repositories;
+  ({ endCursor, hasNextPage } = pageInfo);
+
+  const activeRepos = nodes.filter((node: any) => !node.isArchived);
+  repos.push(...activeRepos.map((node: any) => extractRepositoryFromData(node)));
     } while (hasNextPage);
 
     return repos;
