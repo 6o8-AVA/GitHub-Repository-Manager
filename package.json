@@ -1,12 +1,12 @@
 {
-  "name": "github-repository-manager",
-  "version": "1.6.1",
-  "publisher": "henriqueBruno",
-  "displayName": "GitHub Repository Manager",
+  "name": "github-repository-manager-6o8",
+  "version": "1.6.2",
+  "publisher": "6o8",
+  "displayName": "GitHub Repository Manager (6o8 AVA)",
   "description": "Easily and quickly clone and access your GitHub repositories and create new ones",
   "author": {
-    "name": "Henrique Bruno",
-    "email": "henrique.bruno.fa@gmail.com"
+    "name": "Mario Ricalde",
+    "email": "git@V77z.com"
   },
   "main": "./dist/extension.js",
   "engines": {
@@ -14,10 +14,10 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/SrBrahma/GitHub-Repository-Manager"
+    "url": "https://github.com/6o8-AVA/GitHub-Repository-Manager"
   },
   "bugs": {
-    "url": "https://github.com/SrBrahma/GitHub-Repository-Manager/issues"
+    "url": "https://github.com/6o8-AVA/GitHub-Repository-Manager/issues"
   },
   "icon": "images/logo/logo128.png",
   "scripts": {

@@ -1,18 +1,10 @@
 <div align="center">
-  
-## 🚀 Check out my latest project — [NextStack](https://www.nextstack.gg)! 
 
-<a href="https://www.nextstack.gg" target="_blank">
-  <img src="https://www.nextstack.gg/opengraph-image" width="500" alt="NextStack OpenGraph Image">
-</a>
-
----
-
-[![Installs](https://img.shields.io/visual-studio-marketplace/i/henriqueBruno.github-repository-manager)](https://marketplace.visualstudio.com/items?itemName=henriqueBruno.github-repository-manager)
+[![Installs](https://img.shields.io/visual-studio-marketplace/i/6o8-AVA.github-repository-manager)](https://marketplace.visualstudio.com/items?itemName=6o8-AVA.github-repository-manager)
 
 </div>
 <h1 align="center">
-<b>GitHub Repository Manager</b>
+<b>GitHub Repository Manager (6o8 AVA)</b>
 </h1>
 
 <h3 align="center">
@@ -23,9 +15,8 @@ VS Code extension that lists your personal and organizations GitHub repositories
 <br/>
 
 
-
 <div align="center">
-<img src="https://raw.githubusercontent.com/SrBrahma/GitHub-Repository-Manager/master/images/readme/usage.gif" width="85%" >
+<img src="https://raw.githubusercontent.com/6o8-AVA/GitHub-Repository-Manager/main/images/readme/usage.gif" width="85%" >
 </div>
 <br/>
 
@@ -90,17 +81,20 @@ There are 2 possible cases that allows using that publish functionality:
 
 
 - ### Always Clone To Default Directory
+
 ##### _"githubRepositoryManager.alwaysCloneToDefaultDirectory"_
 Always clone to the directory specified in "git.defaultCloneDirectory".
 ##### Default: **false**
 
 - ## Default Clone Directory Maximum Depth
+
 ##### _"githubRepositoryManager.clonedRepositoriesSearch.defaultCloneDirectoryMaximumDepth"_
 How deep on `"git.defaultCloneDirectory"` the cloned repositories will be searched. A depth of 0 means it will only search in the directory itself, a depth of 3 means it will search up to 3 directories below. The lesser the faster.
 ##### Default: **2**
 
 
 - ## Directories To Ignore
+
 ##### _"githubRepositoryManager.clonedRepositoriesSearch.directoriesToIgnore"_
 Directories names that are ignored on the search for the cloned repositories. `**/` is added to their start.
 ##### Default: **["node_modules", ".vscode", ".git/*", "logs", "src", "lib", "out", "build"]**
@@ -109,10 +103,16 @@ Directories names that are ignored on the search for the cloned repositories. `*
 <br/>
 
 <h1 align="center">
-  <a href="https://github.com/SrBrahma/GitHub-Repository-Manager/blob/master/CHANGELOG.md">
+  <a href="https://github.com/6o8-AVA/GitHub-Repository-Manager/blob/main/CHANGELOG.md">
       Changelog
   </a>
 </h1>
+
+<h2 align="center">
+  
+**Note**: This is a fork of the [original extension](https://github.com/SrBrahma/GitHub-Repository-Manager) by Henrique Bruno, maintained and published by 6o8 Ascendant Versioning Authority (6o8 AVA).
+
+</h2>
 
 <h1 align="center"> Roadmap </h1>
 
@@ -134,18 +134,3 @@ Directories names that are ignored on the search for the cloned repositories. `*
 For developing: clone it, run `npm i`, `npm start` and run the debugger.
 
 </h4>
-
-<br/>
-<h1 align="center"> Donation </h1>
-
-<h3 align="center">
-  Help me to keep and improve this project!
-  <br/>
-</h3>
-
-<!-- Without this div, it wasn't being centered on the marketplace. -->
-<div align="center">
-<a href="https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=6P2HYMMC2VWMG">
-    <img src="https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif" alt="Paypal">
-</a>
-</div>

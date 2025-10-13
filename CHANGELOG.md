@@ -1,5 +1,50 @@
 # Change Log : GitHub Repository Manager
 
+## 1.6.2 - 2025-10-13
+
+**Fork by Mario Ricalde (6o8)**
+
+This version represents a fork of the original extension, maintained and published under a new publisher while respecting the MIT License.
+
+### New Features:
+- **Hide/Unhide Organizations and Repositories**: Added commands to hide and unhide organizations and repositories in both cloned and not-cloned sections
+  - Introduced `HiddenClonedStore` to manage hidden states for cloned repositories
+  - Introduced `HiddenNotClonedStore` to manage hidden states for not-cloned repositories
+  - Updated tree view to visually reflect hidden items
+  - Enhanced storage structure to persist hidden states
+- **Repository Sorting**: Implemented sorting functionality for repositories
+  - Sort by last updated date
+  - Sort alphabetically
+  - Added sorting submenu in repositories view
+  - Created dedicated sorting functions for cloned repositories and organizations
+- **Relative Time Display**: Added relative time formatting for repository updates
+  - Shows time since last update in human-readable format (years, months, weeks, days, hours, minutes, seconds)
+  - Displayed alongside dirty state indicator in repository descriptions
+- **Enhanced Cloned Repositories Management**:
+  - Refactored repository parsing to better handle organization repositories
+  - Improved label display for organization status
+  - Added utility functions for organization label management
+- **Filter Archived Repositories**: Repositories marked as archived are now automatically filtered out from both user and organization repository lists
+
+### Bug Fixes:
+- Fixed `isFork` query parameter handling in `getOrgRepos` function (changed to null for better filtering)
+- Corrected indentation and formatting in `getOrgRepos` and `getUserRepos` functions for better code readability
+
+### Changes in this Fork:
+- Forked from [original repository](https://github.com/SrBrahma/GitHub-Repository-Manager) by Henrique Bruno
+- Changed publisher from "henriqueBruno" to "6o8"
+- Updated display name to "GitHub Repository Manager (6o8)"
+- Updated author information (Mario Ricalde - git@V77z.com)
+- Updated all repository URLs to point to https://github.com/6o8-AVA/GitHub-Repository-Manager
+- Updated bug tracker URL
+- Updated LICENSE to include fork maintainer copyright while preserving original author copyright
+- Updated README to reflect fork status with proper attribution
+- Removed original author's promotional content from README
+- Changed branch references from "master" to "main"
+- Verified and tested production build process
+- Republished to VS Code Marketplace under new publisher
+- Full compliance with MIT License terms
+
 ## 1.6.1
 
 - Fix: 'setAsFavorite' is already registered [#50](https://github.com/SrBrahma/GitHub-Repository-Manager/pull/50).
