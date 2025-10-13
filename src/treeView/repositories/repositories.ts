@@ -1,4 +1,4 @@
-import vscode, { commands, Uri, window, workspace } from 'vscode';
+import * as vscode from 'vscode';
 import { uiCreateRepo } from '../../commandsUi/uiCreateRepo';
 import { uiPublish } from '../../commandsUi/uiPublish/uiPublish';
 import { Configs } from '../../main/configs';
@@ -7,10 +7,21 @@ import { BaseTreeDataProvider, TreeItem } from '../treeViewBase';
 import { activateClonedRepos, getClonedOthersTreeItem, getClonedTreeItem } from './clonedRepos';
 import { activateNotClonedRepos, getNotClonedTreeItem } from './notClonedRepos';
 import type { RepoItem } from './repoItem';
+import {
+  type RepositorySortOrder,
+  getRepositorySortOrder,
+  initializeRepositorySortOrder,
+  setRepositorySortOrder,
+} from './sortOrder';
+
+
+const REPOSITORY_SORT_ORDER_CONTEXT_KEY = 'githubRepoMgr.repositories.sortOrder';
 
 
 export function activateTreeViewRepositories(): void {
   const repositoriesTreeDataProvider = new TreeDataProvider();
+  initializeRepositorySortOrder();
+  void syncRepositorySortOrderContext();
 
   vscode.window.registerTreeDataProvider('githubRepoMgr.views.repositories',
     repositoriesTreeDataProvider);
@@ -27,6 +38,27 @@ export function activateTreeViewRepositories(): void {
   // Reload repos
   vscode.commands.registerCommand('githubRepoMgr.commands.repos.reload', () => User.reloadRepos());
 
+  const selectSortOrder = async (order: RepositorySortOrder): Promise<void> => {
+    const currentOrder = getRepositorySortOrder();
+
+    if (currentOrder === order) {
+      await syncRepositorySortOrderContext();
+      return;
+    }
+
+    await setRepositorySortOrder(order);
+    await setRepositorySortOrderContext(order);
+    repositoriesTreeDataProvider.refresh();
+  };
+
+  vscode.commands.registerCommand('githubRepoMgr.commands.repos.sort.lastUpdated', async () => {
+    await selectSortOrder('lastUpdated');
+  });
+
+  vscode.commands.registerCommand('githubRepoMgr.commands.repos.sort.alphabetical', async () => {
+    await selectSortOrder('alphabetical');
+  });
+
   // Create Repo
   vscode.commands.registerCommand('githubRepoMgr.commands.repos.createRepo', () => uiCreateRepo());
 
@@ -34,9 +66,9 @@ export function activateTreeViewRepositories(): void {
   vscode.commands.registerCommand('githubRepoMgr.commands.repos.publish', () => uiPublish());
 
   // Sets the default directory for cloning
-  commands.registerCommand('githubRepoMgr.commands.pick.defaultCloneDirectory', async () => {
-    const thenable = await window.showOpenDialog({
-      defaultUri: Uri.file(Configs.defaultCloneToDir),
+  vscode.commands.registerCommand('githubRepoMgr.commands.pick.defaultCloneDirectory', async () => {
+    const thenable = await vscode.window.showOpenDialog({
+      defaultUri: vscode.Uri.file(Configs.defaultCloneToDir),
       openLabel: `Select as default directory`,
       canSelectFiles: false,
       canSelectFolders: true,
@@ -45,7 +77,7 @@ export function activateTreeViewRepositories(): void {
 
     if (thenable) {
       // 3rd param as true to change global setting. Else wouldn't work.
-      await workspace.getConfiguration('git').update('defaultCloneDirectory', thenable[0]!.fsPath, true);
+      await vscode.workspace.getConfiguration('git').update('defaultCloneDirectory', thenable[0]!.fsPath, true);
       await User.reloadRepos();
     }
   });
@@ -78,4 +110,13 @@ class TreeDataProvider extends BaseTreeDataProvider {
   protected makeData() {
     this.data = this.getData();
   }
+}
+
+
+async function syncRepositorySortOrderContext(): Promise<void> {
+  await setRepositorySortOrderContext(getRepositorySortOrder());
+}
+
+async function setRepositorySortOrderContext(order: RepositorySortOrder): Promise<void> {
+  await vscode.commands.executeCommand('setContext', REPOSITORY_SORT_ORDER_CONTEXT_KEY, order);
 }

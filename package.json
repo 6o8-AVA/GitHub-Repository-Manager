@@ -159,11 +159,28 @@
         }
       ]
     },
+    "submenus": [
+      {
+        "id": "githubRepoMgr.repositories.sortSubmenu",
+        "label": "Sort Repositories",
+        "icon": "$(list-ordered)"
+      }
+    ],
     "commands": [
       {
         "title": "Create Repository",
         "command": "githubRepoMgr.commands.repos.createRepo",
         "icon": "$(repo-create)"
+      },
+      {
+        "title": "Repositories: Sort by Last Updated",
+        "command": "githubRepoMgr.commands.repos.sort.lastUpdated",
+        "icon": "$(list-ordered)"
+      },
+      {
+        "title": "Repositories: Sort Alphabetically",
+        "command": "githubRepoMgr.commands.repos.sort.alphabetical",
+        "icon": "$(list-ordered)"
       },
       {
         "title": "Create Repository for Current Project",
@@ -241,6 +258,26 @@
           "command": "githubRepoMgr.commands.repos.reload",
           "when": "view == githubRepoMgr.views.repositories && githubRepoMgr.userState == 'logged'",
           "group": "navigation@3"
+        },
+        {
+          "submenu": "githubRepoMgr.repositories.sortSubmenu",
+          "when": "view == githubRepoMgr.views.repositories && githubRepoMgr.userState == 'logged'",
+          "group": "navigation@3.5",
+          "icon": "$(list-ordered)"
+        }
+      ],
+      "githubRepoMgr.repositories.sortSubmenu": [
+        {
+          "command": "githubRepoMgr.commands.repos.sort.lastUpdated",
+          "when": "githubRepoMgr.userState == 'logged'",
+          "group": "navigation@1",
+          "toggled": "githubRepoMgr.repositories.sortOrder == 'lastUpdated'"
+        },
+        {
+          "command": "githubRepoMgr.commands.repos.sort.alphabetical",
+          "when": "githubRepoMgr.userState == 'logged'",
+          "group": "navigation@2",
+          "toggled": "githubRepoMgr.repositories.sortOrder == 'alphabetical'"
         }
       ],
       "view/item/context": [

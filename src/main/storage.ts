@@ -50,6 +50,16 @@ class StorageClass {
     unsetFavorite(repoName: string) { return this._item.set({ additionalKey: repoName, value: false }); },
   };
 
+  repositorySortOrder = {
+    _item: new Item<'alphabetical' | 'lastUpdated'>('repositorySortOrder'),
+    get(): 'alphabetical' | 'lastUpdated' {
+      return this._item.get({ additionalKey: 'value', defaultValue: 'lastUpdated' });
+    },
+    set(value: 'alphabetical' | 'lastUpdated') {
+      return this._item.set({ additionalKey: 'value', value });
+    },
+  };
+
   // Removes all keys
   // resetGlobalState() {
   //   // Forces the read of the private _value.

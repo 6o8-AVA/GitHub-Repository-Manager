@@ -4,6 +4,7 @@ import { OrgStatus } from '../../store/organization';
 import { User } from '../../store/user';
 import { TreeItem } from '../treeViewBase';
 import { RepoItem } from './repoItem';
+import { sortRepositoriesForOrganization } from './sortOrder';
 
 
 export function activateNotClonedRepos(): void {
@@ -29,10 +30,11 @@ function getEmptyOrgLabel(status: OrgStatus): string {
 
 export function getNotClonedTreeItem(): TreeItem {
   const orgs: TreeItem[] = User.organizations.map((org) => {
+    const sortedRepos = sortRepositoriesForOrganization(org.notClonedRepos);
     return new TreeItem({
       label: `${org.name}`,
       children: (org.repositories.length
-        ? org.notClonedRepos.map((repo) => new RepoItem({
+        ? sortedRepos.map((repo) => new RepoItem({
           repo,
           contextValue: 'githubRepoMgr.context.notClonedRepo',
           command: {

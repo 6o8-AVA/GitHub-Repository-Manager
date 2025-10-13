@@ -8,6 +8,7 @@ import type { Repository } from '../../store/repository';
 import { User } from '../../store/user';
 import { TreeItem } from '../treeViewBase';
 import { RepoItem } from './repoItem';
+import { sortRepositoriesForCloned } from './sortOrder';
 
 
 export function activateClonedRepos(): void {
@@ -82,34 +83,12 @@ function parseChildren(clonedRepos: Repository[], userLogin?: string): TreeItem 
   }));
 }
 
-function sortClonedRepos(clonedRepos: Repository[], userLogin?: string): Repository[] {
-  return clonedRepos.sort((a, b) => {
-
-    if (userLogin) {
-      // User repos comes first
-      if (a.ownerLogin === userLogin && b.ownerLogin !== userLogin)
-        return -1;
-      if (a.ownerLogin !== userLogin && b.ownerLogin === userLogin)
-        return 1;
-    }
-
-    // Different Authors are sorted (ownerLogin === userLogin doesn't enter this block)
-    if (a.ownerLogin !== b.ownerLogin)
-      return (a.ownerLogin.toLocaleUpperCase() < b.ownerLogin.toLocaleUpperCase())
-        ? -1 : 1;
-
-    // If same owner login, repos are sorted by name.
-    return (a.name.toLocaleUpperCase() < b.name.toLocaleUpperCase())
-      ? -1 : 1;
-  });
-}
-
 // TODO: Add remember cloned repos when not logged option?
 export function getClonedTreeItem(): TreeItem {
   if (!User.login)
     throw new Error('User.login is not set!');
 
-  const sortedRepos = sortClonedRepos(User.clonedRepos, User.login);
+  const sortedRepos = sortRepositoriesForCloned(User.clonedRepos, User.login);
   return new TreeItem({
     label: 'Cloned',
     children: noLocalSearchPaths
@@ -125,7 +104,7 @@ export function getClonedTreeItem(): TreeItem {
 
 // TODO: Add remember cloned repos when not logged option?
 export function getClonedOthersTreeItem(): TreeItem {
-  const sortedRepos = sortClonedRepos(User.clonedOtherRepos);
+  const sortedRepos = sortRepositoriesForCloned(User.clonedOtherRepos);
   return new TreeItem({
     label: 'Cloned - Others',
     children: parseChildren(sortedRepos, User.login),
