@@ -1,6 +1,6 @@
 <div align="center">
 
-[![Installs](https://img.shields.io/visual-studio-marketplace/i/6o8-AVA.github-repository-manager)](https://marketplace.visualstudio.com/items?itemName=6o8-AVA.github-repository-manager)
+[![Installs](https://img.shields.io/visual-studio-marketplace/i/6o8.github-repository-manager-6o8)](https://marketplace.visualstudio.com/items?itemName=6o8.github-repository-manager-6o8)
 
 </div>
 <h1 align="center">
