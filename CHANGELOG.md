@@ -1,36 +1,43 @@
 # Change Log : GitHub Repository Manager
 
+## 1.6.3 - 2025-10-13
+
+README updated to be more clear about features and cleanup to remove original author's promotional content.
+
 ## 1.6.2 - 2025-10-13
 
-**Fork by Mario Ricalde (6o8)**
+**Fork by 6o8 AVA *
 
 This version represents a fork of the original extension, maintained and published under a new publisher while respecting the MIT License.
 
 ### New Features:
+
 - **Hide/Unhide Organizations and Repositories**: Added commands to hide and unhide organizations and repositories in both cloned and not-cloned sections
-  - Introduced `HiddenClonedStore` to manage hidden states for cloned repositories
-  - Introduced `HiddenNotClonedStore` to manage hidden states for not-cloned repositories
-  - Updated tree view to visually reflect hidden items
-  - Enhanced storage structure to persist hidden states
+    - Introduced `HiddenClonedStore` to manage hidden states for cloned repositories
+    - Introduced `HiddenNotClonedStore` to manage hidden states for not-cloned repositories
+    - Updated tree view to visually reflect hidden items
+    - Enhanced storage structure to persist hidden states
 - **Repository Sorting**: Implemented sorting functionality for repositories
-  - Sort by last updated date
-  - Sort alphabetically
-  - Added sorting submenu in repositories view
-  - Created dedicated sorting functions for cloned repositories and organizations
+    - Sort by last updated date
+    - Sort alphabetically
+    - Added sorting submenu in repositories view
+    - Created dedicated sorting functions for cloned repositories and organizations
 - **Relative Time Display**: Added relative time formatting for repository updates
-  - Shows time since last update in human-readable format (years, months, weeks, days, hours, minutes, seconds)
-  - Displayed alongside dirty state indicator in repository descriptions
+    - Shows time since last update in human-readable format (years, months, weeks, days, hours, minutes, seconds)
+    - Displayed alongside dirty state indicator in repository descriptions
 - **Enhanced Cloned Repositories Management**:
-  - Refactored repository parsing to better handle organization repositories
-  - Improved label display for organization status
-  - Added utility functions for organization label management
+    - Refactored repository parsing to better handle organization repositories
+    - Improved label display for organization status
+    - Added utility functions for organization label management
 - **Filter Archived Repositories**: Repositories marked as archived are now automatically filtered out from both user and organization repository lists
 
 ### Bug Fixes:
+
 - Fixed `isFork` query parameter handling in `getOrgRepos` function (changed to null for better filtering)
 - Corrected indentation and formatting in `getOrgRepos` and `getUserRepos` functions for better code readability
 
 ### Changes in this Fork:
+
 - Forked from [original repository](https://github.com/SrBrahma/GitHub-Repository-Manager) by Henrique Bruno
 - Changed publisher from "henriqueBruno" to "6o8"
 - Updated display name to "GitHub Repository Manager (6o8)"
@@ -157,7 +164,7 @@ Added support to SSH cloned repositories to be found ([#9](https://github.com/Sr
 
 Thanks to [jonathan-fielding](https://github.com/jonathan-fielding) for both pull requests!
 
-## 0.3.6 - May 22, 2020 -> Today was the day of quick and small changes.
+## 0.3.6 - May 22, 2020 -> Today was the day of quick and small changes
 
 Reworked the Repositories Tree View Item Tooltip. Looks better now. Unfortunatelly, the ":" aren't perfectly alignable, as the font is not monospaced. Yeah, it annoys me too. We have to accept it!!
 
@@ -226,11 +233,3 @@ Quick fixes
 ## 0.1.0 - May 6, 2020
 
 First release
-
-<br/>
-
-# Donation
-
-Help me to keep and improve this project!
-
-[![](https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=6P2HYMMC2VWMG)
