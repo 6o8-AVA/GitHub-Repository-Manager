@@ -1,7 +1,22 @@
+import { EventEmitter } from 'vscode';
 import type vscode from 'vscode';
 
 
-let context: vscode.ExtensionContext;
+let context: vscode.ExtensionContext | undefined;
+const didActivateEmitter = new EventEmitter<void>();
+let isActivated = false;
+
+export type HiddenNotClonedState = {
+  orgs: string[];
+  repos: Record<string, string[]>;
+};
+
+function createDefaultHiddenNotClonedState(): HiddenNotClonedState {
+  return {
+    orgs: [],
+    repos: {},
+  };
+}
 
 
 // https://stackoverflow.com/a/57857305
@@ -9,9 +24,21 @@ let context: vscode.ExtensionContext;
 function get<T>(key: string): T | undefined;
 function get<T>(key: string, defaultValue: T): T;
 function get<T>(key: string, defaultValue?: T): T | undefined;
-function get<T>(key: string, defaultValue?: T): T | undefined { return context.globalState.get(key, defaultValue); }
-function set<T>(key: string, value: T) { return context.globalState.update(key, value); }
-function remove(key: string) { return context.globalState.update(key, undefined); }
+function get<T>(key: string, defaultValue?: T): T | undefined {
+  if (!context)
+    return defaultValue;
+  return context.globalState.get(key, defaultValue as T);
+}
+function set<T>(key: string, value: T) {
+  if (!context)
+    return Promise.resolve();
+  return context.globalState.update(key, value);
+}
+function remove(key: string) {
+  if (!context)
+    return Promise.resolve();
+  return context.globalState.update(key, undefined);
+}
 
 
 type ItemCommon = {
@@ -39,6 +66,8 @@ class Item<T> {
 class StorageClass {
   activate(contextArg: vscode.ExtensionContext) {
     context = contextArg;
+    isActivated = true;
+    didActivateEmitter.fire();
   }
 
   // Call it favorites2 if change its schema
@@ -60,12 +89,37 @@ class StorageClass {
     },
   };
 
+  hiddenNotCloned = {
+    _item: new Item<HiddenNotClonedState>('hiddenNotCloned'),
+    get(): HiddenNotClonedState {
+      const stored = this._item.get({
+        additionalKey: 'state',
+        defaultValue: createDefaultHiddenNotClonedState(),
+      });
+      return {
+        orgs: [...stored.orgs],
+        repos: Object.fromEntries(
+          Object.entries(stored.repos).map(([key, value]) => [key, [...value]]),
+        ),
+      };
+    },
+    set(value: HiddenNotClonedState) {
+      return this._item.set({ additionalKey: 'state', value });
+    },
+  };
+
   // Removes all keys
   // resetGlobalState() {
   //   // Forces the read of the private _value.
   //   const keys = Object.keys((context.globalState as any)._value);
   //   keys.forEach(key => remove(key));
   // }
+
+  onDidActivate = didActivateEmitter.event;
+
+  isReady(): boolean {
+    return isActivated;
+  }
 }
 
 export const Storage = new StorageClass();

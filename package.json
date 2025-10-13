@@ -228,6 +228,22 @@
         "title": "Clone to"
       },
       {
+        "command": "githubRepoMgr.commands.notClonedRepos.hideOrg",
+        "title": "Hidden"
+      },
+      {
+        "command": "githubRepoMgr.commands.notClonedRepos.hideRepo",
+        "title": "Hidden"
+      },
+      {
+        "command": "githubRepoMgr.commands.notClonedRepos.unhideOrg",
+        "title": "Unhide"
+      },
+      {
+        "command": "githubRepoMgr.commands.notClonedRepos.unhideRepo",
+        "title": "Unhide"
+      },
+      {
         "command": "githubRepoMgr.commands.clonedRepos.setAsFavorite",
         "title": "Set as Favorite",
         "icon": "$(star)"
@@ -282,13 +298,33 @@
       ],
       "view/item/context": [
         {
+          "command": "githubRepoMgr.commands.notClonedRepos.hideOrg",
+          "when": "viewItem == githubRepoMgr.context.notClonedOrg",
+          "group": "0@-1"
+        },
+        {
+          "command": "githubRepoMgr.commands.notClonedRepos.hideRepo",
+          "when": "viewItem == githubRepoMgr.context.notClonedRepo",
+          "group": "0@-1"
+        },
+        {
+          "command": "githubRepoMgr.commands.notClonedRepos.unhideOrg",
+          "when": "viewItem == githubRepoMgr.context.hiddenNotClonedOrg",
+          "group": "0@-1"
+        },
+        {
+          "command": "githubRepoMgr.commands.notClonedRepos.unhideRepo",
+          "when": "viewItem == githubRepoMgr.context.hiddenNotClonedRepo",
+          "group": "0@-1"
+        },
+        {
           "command": "githubRepoMgr.commands.repos.openWebPage",
-          "when": "viewItem =~ /githubRepoMgr\\.context\\.(not)?clonedRepo/i",
+          "when": "viewItem =~ /githubRepoMgr\\.context\\.(clonedRepo|notClonedRepo|hiddenNotClonedRepo)/i",
           "group": "9@0"
         },
         {
           "command": "githubRepoMgr.commands.repos.copyRepositoryUrl",
-          "when": "viewItem =~ /githubRepoMgr\\.context\\.(not)?clonedRepo/i",
+          "when": "viewItem =~ /githubRepoMgr\\.context\\.(clonedRepo|notClonedRepo|hiddenNotClonedRepo)/i",
           "group": "9@1"
         },
         {
@@ -343,7 +379,7 @@
         },
         {
           "command": "githubRepoMgr.commands.repos.openWebPage",
-          "when": "viewItem =~ /githubRepoMgr\\.context\\.(not)?clonedRepo/i",
+          "when": "viewItem =~ /githubRepoMgr\\.context\\.(clonedRepo|notClonedRepo|hiddenNotClonedRepo)/i",
           "group": "inline@5"
         }
       ]
