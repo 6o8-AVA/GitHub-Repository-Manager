@@ -57,9 +57,13 @@ export function getNotClonedTreeItem(): TreeItem {
 
   const hiddenSection = createHiddenSectionTreeItem(snapshot);
 
+  const children: TreeItem[] = [...visibleOrgs];
+  if (hiddenSection)
+    children.push(hiddenSection);
+
   return new TreeItem({
     label: 'Not Cloned',
-    children: [...visibleOrgs, hiddenSection],
+    children,
   });
 }
 
@@ -138,7 +142,7 @@ function createVisibleRepoItem(org: Organization, repo: Repository): RepoTreeIte
   });
 }
 
-function createHiddenSectionTreeItem(snapshot: HiddenSnapshot): TreeItem {
+function createHiddenSectionTreeItem(snapshot: HiddenSnapshot): TreeItem | undefined {
   const hiddenOrgItems: OrgTreeItem[] = [];
 
   const hiddenOrgLogins = Array.from(snapshot.orgs);
@@ -166,16 +170,13 @@ function createHiddenSectionTreeItem(snapshot: HiddenSnapshot): TreeItem {
 
   hiddenOrgItems.sort((a, b) => getTreeItemLabel(a).localeCompare(getTreeItemLabel(b), undefined, { sensitivity: 'base' }));
 
-  const hasHiddenItems = hiddenOrgItems.length > 0;
-
-  const children: TreeItem[] = hasHiddenItems
-    ? hiddenOrgItems
-    : [new TreeItem({ label: 'No hidden organizations or repositories' })];
+  if (hiddenOrgItems.length === 0)
+    return undefined;
 
   return new TreeItem({
     label: 'Hidden',
     contextValue: 'githubRepoMgr.context.hiddenNotClonedSection',
-    children,
+    children: hiddenOrgItems,
     collapsibleState: vscode.TreeItemCollapsibleState.Collapsed,
   });
 }

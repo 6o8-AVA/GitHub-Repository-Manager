@@ -229,11 +229,11 @@
       },
       {
         "command": "githubRepoMgr.commands.notClonedRepos.hideOrg",
-        "title": "Hidden"
+        "title": "Hide"
       },
       {
         "command": "githubRepoMgr.commands.notClonedRepos.hideRepo",
-        "title": "Hidden"
+        "title": "Hide"
       },
       {
         "command": "githubRepoMgr.commands.notClonedRepos.unhideOrg",
@@ -256,6 +256,22 @@
       {
         "command": "githubRepoMgr.commands.clonedRepos.delete",
         "title": "Delete"
+      },
+      {
+        "command": "githubRepoMgr.commands.clonedRepos.hideOrg",
+        "title": "Hide"
+      },
+      {
+        "command": "githubRepoMgr.commands.clonedRepos.hideRepo",
+        "title": "Hide"
+      },
+      {
+        "command": "githubRepoMgr.commands.clonedRepos.unhideOrg",
+        "title": "Unhide"
+      },
+      {
+        "command": "githubRepoMgr.commands.clonedRepos.unhideRepo",
+        "title": "Unhide"
       }
     ],
     "menus": {
@@ -319,12 +335,12 @@
         },
         {
           "command": "githubRepoMgr.commands.repos.openWebPage",
-          "when": "viewItem =~ /githubRepoMgr\\.context\\.(clonedRepo|notClonedRepo|hiddenNotClonedRepo)/i",
+          "when": "viewItem =~ /githubRepoMgr\\.context\\.(clonedRepo|notClonedRepo|hiddenNotClonedRepo|hiddenClonedRepo)/i",
           "group": "9@0"
         },
         {
           "command": "githubRepoMgr.commands.repos.copyRepositoryUrl",
-          "when": "viewItem =~ /githubRepoMgr\\.context\\.(clonedRepo|notClonedRepo|hiddenNotClonedRepo)/i",
+          "when": "viewItem =~ /githubRepoMgr\\.context\\.(clonedRepo|notClonedRepo|hiddenNotClonedRepo|hiddenClonedRepo)/i",
           "group": "9@1"
         },
         {
@@ -358,6 +374,26 @@
           "group": "1@2"
         },
         {
+          "command": "githubRepoMgr.commands.clonedRepos.hideOrg",
+          "when": "viewItem == githubRepoMgr.context.clonedOrg",
+          "group": "2@0"
+        },
+        {
+          "command": "githubRepoMgr.commands.clonedRepos.hideRepo",
+          "when": "viewItem == githubRepoMgr.context.clonedRepo",
+          "group": "2@0"
+        },
+        {
+          "command": "githubRepoMgr.commands.clonedRepos.unhideOrg",
+          "when": "viewItem == githubRepoMgr.context.hiddenClonedOrg",
+          "group": "2@0"
+        },
+        {
+          "command": "githubRepoMgr.commands.clonedRepos.unhideRepo",
+          "when": "viewItem == githubRepoMgr.context.hiddenClonedRepo",
+          "group": "2@0"
+        },
+        {
           "command": "githubRepoMgr.commands.notClonedRepos.cloneTo",
           "when": "viewItem == githubRepoMgr.context.notClonedRepo",
           "group": "0@0"
@@ -379,7 +415,7 @@
         },
         {
           "command": "githubRepoMgr.commands.repos.openWebPage",
-          "when": "viewItem =~ /githubRepoMgr\\.context\\.(clonedRepo|notClonedRepo|hiddenNotClonedRepo)/i",
+          "when": "viewItem =~ /githubRepoMgr\\.context\\.(clonedRepo|notClonedRepo|hiddenNotClonedRepo|hiddenClonedRepo)/i",
           "group": "inline@5"
         }
       ]

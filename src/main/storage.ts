@@ -1,5 +1,5 @@
-import { EventEmitter } from 'vscode';
 import type vscode from 'vscode';
+import { EventEmitter } from 'vscode';
 
 
 let context: vscode.ExtensionContext | undefined;
@@ -11,7 +11,19 @@ export type HiddenNotClonedState = {
   repos: Record<string, string[]>;
 };
 
+export type HiddenClonedState = {
+  orgs: string[];
+  repos: Record<string, string[]>;
+};
+
 function createDefaultHiddenNotClonedState(): HiddenNotClonedState {
+  return {
+    orgs: [],
+    repos: {},
+  };
+}
+
+function createDefaultHiddenClonedState(): HiddenClonedState {
   return {
     orgs: [],
     repos: {},
@@ -104,6 +116,25 @@ class StorageClass {
       };
     },
     set(value: HiddenNotClonedState) {
+      return this._item.set({ additionalKey: 'state', value });
+    },
+  };
+
+  hiddenCloned = {
+    _item: new Item<HiddenClonedState>('hiddenCloned'),
+    get(): HiddenClonedState {
+      const stored = this._item.get({
+        additionalKey: 'state',
+        defaultValue: createDefaultHiddenClonedState(),
+      });
+      return {
+        orgs: [...stored.orgs],
+        repos: Object.fromEntries(
+          Object.entries(stored.repos).map(([key, value]) => [key, [...value]]),
+        ),
+      };
+    },
+    set(value: HiddenClonedState) {
       return this._item.set({ additionalKey: 'state', value });
     },
   };

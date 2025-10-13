@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { uiCreateRepo } from '../../commandsUi/uiCreateRepo';
 import { uiPublish } from '../../commandsUi/uiPublish/uiPublish';
 import { Configs } from '../../main/configs';
+import { HiddenCloned } from '../../store/hiddenCloned';
 import { HiddenNotCloned } from '../../store/hiddenNotCloned';
 import { RepositoriesState, User } from '../../store/user';
 import { BaseTreeDataProvider, TreeItem } from '../treeViewBase';
@@ -28,6 +29,7 @@ export function activateTreeViewRepositories(): void {
     repositoriesTreeDataProvider);
   User.subscribe('repos', () => { repositoriesTreeDataProvider.refresh(); });
   HiddenNotCloned.onDidChange(() => { repositoriesTreeDataProvider.refresh(); });
+  HiddenCloned.onDidChange(() => { repositoriesTreeDataProvider.refresh(); });
 
   // Access GitHub Web Page
   vscode.commands.registerCommand('githubRepoMgr.commands.repos.openWebPage', ({ repo }: RepoItem) =>

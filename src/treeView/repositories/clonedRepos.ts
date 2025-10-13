@@ -4,6 +4,7 @@ import type { MessageItem } from 'vscode';
 import { commands, env, ThemeIcon, TreeItemCollapsibleState, Uri, window, workspace } from 'vscode';
 import { isGitDirty } from '../../commands/git/dirtiness/dirtiness';
 import { noLocalSearchPaths } from '../../commands/searchClonedRepos/searchClonedRepos';
+import { HiddenCloned } from '../../store/hiddenCloned';
 import { OrgStatus } from '../../store/organization';
 import type { Repository } from '../../store/repository';
 import { User } from '../../store/user';
@@ -70,26 +71,169 @@ export function activateClonedRepos(): void {
       }
     }
   });
+
+  // Hide organization
+  commands.registerCommand('githubRepoMgr.commands.clonedRepos.hideOrg', (item: TreeItem & { orgLogin?: string }) => {
+    if (item.orgLogin)
+      HiddenCloned.hideOrg(item.orgLogin);
+  });
+
+  // Hide repository
+  commands.registerCommand('githubRepoMgr.commands.clonedRepos.hideRepo', (item: RepoItem) => {
+    const orgLogin = item.repo.ownerLogin;
+    const repoUrl = item.repo.url;
+    HiddenCloned.hideRepo(orgLogin, repoUrl);
+  });
+
+  // Unhide organization
+  commands.registerCommand('githubRepoMgr.commands.clonedRepos.unhideOrg', (item: TreeItem & { orgLogin?: string }) => {
+    if (item.orgLogin)
+      HiddenCloned.unhideOrg(item.orgLogin);
+  });
+
+  // Unhide repository
+  commands.registerCommand('githubRepoMgr.commands.clonedRepos.unhideRepo', (item: RepoItem) => {
+    const orgLogin = item.repo.ownerLogin;
+    const repoUrl = item.repo.url;
+    HiddenCloned.unhideRepo(orgLogin, repoUrl);
+  });
 }
 
 type ParseChildrenOptions = {
   userLogin?: string;
   includeOwner?: boolean;
+  contextValue?: string;
+  commandName?: string;
 };
 
 function parseChildren(clonedRepos: Repository[], options: ParseChildrenOptions = {}): TreeItem[] {
-  const { userLogin, includeOwner } = options;
+  const { userLogin, includeOwner, contextValue, commandName } = options;
 
   return clonedRepos.map((repo) => new RepoItem({
     repo,
-    contextValue: 'githubRepoMgr.context.clonedRepo',
+    contextValue: contextValue ?? 'githubRepoMgr.context.clonedRepo',
     command: {
       // We wrap the repo in {} because we may call the cloneTo from the right click, and it passes the RepoItem.
-      command: 'githubRepoMgr.commands.clonedRepos.open',
+      command: commandName ?? 'githubRepoMgr.commands.clonedRepos.open',
       arguments: [{ repo }],
     },
     includeOwner: includeOwner ?? (userLogin ? repo.ownerLogin !== userLogin : false),
   }));
+}
+
+function attachOrgMetadata(treeItem: TreeItem, orgLogin: string): TreeItem {
+  return Object.assign(treeItem, { orgLogin });
+}
+
+function createVisibleOrgTreeItem(org: { name: string; login: string; clonedRepos: Repository[]; repositories: Repository[]; status: OrgStatus }, snapshot: ReturnType<typeof HiddenCloned.getSnapshot>): TreeItem | undefined {
+  const hiddenRepos = snapshot.repos.get(org.login) ?? new Set<string>();
+  const sortedRepos = sortRepositoriesForCloned(org.clonedRepos, org.login)
+    .filter((repo) => !hiddenRepos.has(repo.url));
+
+  const hasClonedRepos = sortedRepos.length > 0;
+
+  if (!hasClonedRepos && org.status === OrgStatus.loaded)
+    return undefined;
+
+  return attachOrgMetadata(
+    new TreeItem({
+      label: `${org.name}`,
+      children: (org.repositories.length
+        ? parseChildren(sortedRepos, { userLogin: org.login })
+        : new TreeItem({ label: getEmptyOrgLabel(org.status) })),
+      collapsibleState: TreeItemCollapsibleState.Collapsed,
+      contextValue: 'githubRepoMgr.context.clonedOrg',
+    }),
+    org.login,
+  );
+}
+
+function createHiddenSectionTreeItem(snapshot: ReturnType<typeof HiddenCloned.getSnapshot>): TreeItem | undefined {
+  const hiddenOrgItems: TreeItem[] = [];
+
+  // Add completely hidden orgs
+  const hiddenOrgLogins = Array.from(snapshot.orgs);
+  hiddenOrgLogins.forEach((orgLogin) => {
+    const orgItem = createHiddenOrgTreeItem(orgLogin, snapshot);
+    if (orgItem)
+      hiddenOrgItems.push(orgItem);
+  });
+
+  // Add orgs with some hidden repos (but not completely hidden)
+  for (const [orgLogin, repoUrls] of snapshot.repos.entries()) {
+    if (snapshot.orgs.has(orgLogin) || repoUrls.size === 0)
+      continue;
+    const orgItem = createHiddenOrgTreeItem(orgLogin, snapshot);
+    if (orgItem)
+      hiddenOrgItems.push(orgItem);
+  }
+
+  if (hiddenOrgItems.length === 0)
+    return undefined;
+
+  return new TreeItem({
+    label: 'Hidden',
+    children: hiddenOrgItems,
+    collapsibleState: TreeItemCollapsibleState.Collapsed,
+  });
+}
+
+function createHiddenOrgTreeItem(orgLogin: string, snapshot: ReturnType<typeof HiddenCloned.getSnapshot>): TreeItem | undefined {
+  const org = User.organizations.find((o) => o.login === orgLogin);
+  const orgName = org?.name ?? orgLogin;
+  const isOrgHidden = snapshot.orgs.has(orgLogin);
+
+  const repoItems = createHiddenRepoItems(orgLogin, snapshot);
+
+  // Don't show the org if there are no actual repos to display
+  if (!repoItems)
+    return undefined;
+
+  return attachOrgMetadata(
+    new TreeItem({
+      label: orgName,
+      description: isOrgHidden ? 'organization hidden' : undefined,
+      children: repoItems,
+      collapsibleState: TreeItemCollapsibleState.Collapsed,
+      contextValue: 'githubRepoMgr.context.hiddenClonedOrg',
+    }),
+    orgLogin,
+  );
+}
+
+function createHiddenRepoItems(orgLogin: string, snapshot: ReturnType<typeof HiddenCloned.getSnapshot>): TreeItem[] | undefined {
+  const hiddenRepoUrlsSet = snapshot.repos.get(orgLogin);
+  const org = User.organizations.find((o) => o.login === orgLogin);
+
+  if (!org)
+    return undefined; // Don't show org if not found
+
+  const isOrgHidden = snapshot.orgs.has(orgLogin);
+
+  if (isOrgHidden) {
+    // Show all cloned repos when the entire org is hidden
+    const repos = parseChildren(org.clonedRepos, {
+      userLogin: org.login,
+      contextValue: 'githubRepoMgr.context.hiddenClonedRepo',
+      commandName: 'githubRepoMgr.commands.clonedRepos.open',
+    });
+    return repos.length > 0 ? repos : undefined;
+  }
+
+  if (!hiddenRepoUrlsSet || hiddenRepoUrlsSet.size === 0)
+    return undefined; // Don't show org if no hidden repos
+
+  const hiddenRepoUrls = Array.from(hiddenRepoUrlsSet);
+  const hiddenRepos = org.clonedRepos.filter((repo) => hiddenRepoUrls.includes(repo.url));
+
+  if (hiddenRepos.length === 0)
+    return undefined; // Don't show org if hidden repos not found
+
+  return parseChildren(hiddenRepos, {
+    userLogin: org.login,
+    contextValue: 'githubRepoMgr.context.hiddenClonedRepo',
+    commandName: 'githubRepoMgr.commands.clonedRepos.open',
+  });
 }
 
 // TODO: Add remember cloned repos when not logged option?
@@ -107,26 +251,23 @@ export function getClonedTreeItem(): TreeItem {
       }),
     });
 
-  const orgs = User.organizations
-    .map((org) => {
-      const sortedRepos = sortRepositoriesForCloned(org.clonedRepos, org.login);
-      const hasClonedRepos = sortedRepos.length > 0;
+  const snapshot = HiddenCloned.getSnapshot();
 
-      if (!hasClonedRepos && org.status === OrgStatus.loaded)
-        return undefined;
-
-      return new TreeItem({
-        label: `${org.name}`,
-        children: (org.repositories.length
-          ? parseChildren(sortedRepos, { userLogin: org.login })
-          : new TreeItem({ label: getEmptyOrgLabel(org.status) })),
-        collapsibleState: TreeItemCollapsibleState.Collapsed,
-      });
-    })
+  const visibleOrgs = User.organizations
+    .filter((org) => !snapshot.orgs.has(org.login))
+    .map((org) => createVisibleOrgTreeItem(org, snapshot))
     .filter((orgTreeItem): orgTreeItem is TreeItem => Boolean(orgTreeItem));
 
-  const treeChildren = orgs.length
-    ? orgs
+  const hiddenSection = createHiddenSectionTreeItem(snapshot);
+
+  const children: TreeItem[] = [];
+  if (visibleOrgs.length > 0)
+    children.push(...visibleOrgs);
+  if (hiddenSection)
+    children.push(hiddenSection);
+
+  const treeChildren = children.length > 0
+    ? children
     : new TreeItem({ label: 'No repositories cloned yet' });
 
   return new TreeItem({
