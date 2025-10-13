@@ -1,8 +1,8 @@
 import vscode, { commands } from 'vscode';
 import { uiCloneTo } from '../../commandsUi/uiCloneTo';
-import { OrgStatus } from '../../store/organization';
 import { User } from '../../store/user';
 import { TreeItem } from '../treeViewBase';
+import { getEmptyOrgLabel } from './orgTreeUtils';
 import { RepoItem } from './repoItem';
 import { sortRepositoriesForOrganization } from './sortOrder';
 
@@ -13,19 +13,6 @@ export function activateNotClonedRepos(): void {
     ({ repo }: RepoItem) => uiCloneTo({
       name: repo.name, ownerLogin: repo.ownerLogin, reloadRepos: true,
     }));
-}
-
-// Much like unused right now. Orgs will always be loaded here.
-function getEmptyOrgLabel(status: OrgStatus): string {
-  switch (status) {
-    case OrgStatus.errorLoading:
-      return 'Error loading';
-    case OrgStatus.notLoaded: // Same as loading.
-    case OrgStatus.loading:
-      return 'Loading...';
-    case OrgStatus.loaded:
-      return 'Empty';
-  }
 }
 
 export function getNotClonedTreeItem(): TreeItem {

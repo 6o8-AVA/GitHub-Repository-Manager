@@ -1,12 +1,14 @@
 import path from 'path';
 import fse from 'fs-extra';
 import type { MessageItem } from 'vscode';
-import { commands, env, ThemeIcon, Uri, window, workspace } from 'vscode';
+import { commands, env, ThemeIcon, TreeItemCollapsibleState, Uri, window, workspace } from 'vscode';
 import { isGitDirty } from '../../commands/git/dirtiness/dirtiness';
 import { noLocalSearchPaths } from '../../commands/searchClonedRepos/searchClonedRepos';
+import { OrgStatus } from '../../store/organization';
 import type { Repository } from '../../store/repository';
 import { User } from '../../store/user';
 import { TreeItem } from '../treeViewBase';
+import { getEmptyOrgLabel } from './orgTreeUtils';
 import { RepoItem } from './repoItem';
 import { sortRepositoriesForCloned } from './sortOrder';
 
@@ -70,7 +72,14 @@ export function activateClonedRepos(): void {
   });
 }
 
-function parseChildren(clonedRepos: Repository[], userLogin?: string): TreeItem | TreeItem[] {
+type ParseChildrenOptions = {
+  userLogin?: string;
+  includeOwner?: boolean;
+};
+
+function parseChildren(clonedRepos: Repository[], options: ParseChildrenOptions = {}): TreeItem[] {
+  const { userLogin, includeOwner } = options;
+
   return clonedRepos.map((repo) => new RepoItem({
     repo,
     contextValue: 'githubRepoMgr.context.clonedRepo',
@@ -79,7 +88,7 @@ function parseChildren(clonedRepos: Repository[], userLogin?: string): TreeItem 
       command: 'githubRepoMgr.commands.clonedRepos.open',
       arguments: [{ repo }],
     },
-    includeOwner: repo.ownerLogin !== userLogin,
+    includeOwner: includeOwner ?? (userLogin ? repo.ownerLogin !== userLogin : false),
   }));
 }
 
@@ -88,16 +97,41 @@ export function getClonedTreeItem(): TreeItem {
   if (!User.login)
     throw new Error('User.login is not set!');
 
-  const sortedRepos = sortRepositoriesForCloned(User.clonedRepos, User.login);
-  return new TreeItem({
-    label: 'Cloned',
-    children: noLocalSearchPaths
-      ? new TreeItem({
+  if (noLocalSearchPaths)
+    return new TreeItem({
+      label: 'Cloned',
+      children: new TreeItem({
         label: ' Press here to select "git.defaultCloneDirectory"',
         command: 'githubRepoMgr.commands.pick.defaultCloneDirectory',
         iconPath: new ThemeIcon('file-directory'),
-      })
-      : parseChildren(sortedRepos, User.login),
+      }),
+    });
+
+  const orgs = User.organizations
+    .map((org) => {
+      const sortedRepos = sortRepositoriesForCloned(org.clonedRepos, org.login);
+      const hasClonedRepos = sortedRepos.length > 0;
+
+      if (!hasClonedRepos && org.status === OrgStatus.loaded)
+        return undefined;
+
+      return new TreeItem({
+        label: `${org.name}`,
+        children: (org.repositories.length
+          ? parseChildren(sortedRepos, { userLogin: org.login })
+          : new TreeItem({ label: getEmptyOrgLabel(org.status) })),
+        collapsibleState: TreeItemCollapsibleState.Collapsed,
+      });
+    })
+    .filter((orgTreeItem): orgTreeItem is TreeItem => Boolean(orgTreeItem));
+
+  const treeChildren = orgs.length
+    ? orgs
+    : new TreeItem({ label: 'No repositories cloned yet' });
+
+  return new TreeItem({
+    label: 'Cloned',
+    children: treeChildren,
   });
 }
 
@@ -107,6 +141,6 @@ export function getClonedOthersTreeItem(): TreeItem {
   const sortedRepos = sortRepositoriesForCloned(User.clonedOtherRepos);
   return new TreeItem({
     label: 'Cloned - Others',
-    children: parseChildren(sortedRepos, User.login),
+    children: parseChildren(sortedRepos, { userLogin: User.login }),
   });
 }
