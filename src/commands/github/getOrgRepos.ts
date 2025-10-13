@@ -94,7 +94,7 @@ query getOrgRepos ($after: String, $org: String!) {
   viewer {
     organization(login: $org) {
       repositories(
-        isFork: false, first: 100, after: $after
+        isFork: null, first: 100, after: $after
         orderBy: { field: NAME, direction: ASC }
       ) {
         pageInfo {
