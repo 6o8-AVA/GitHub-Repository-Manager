@@ -9,17 +9,20 @@ let isActivated = false;
 export type HiddenNotClonedState = {
   orgs: string[];
   repos: Record<string, string[]>;
+  orgVisibleRepos: Record<string, string[]>;
 };
 
 export type HiddenClonedState = {
   orgs: string[];
   repos: Record<string, string[]>;
+  orgVisibleRepos: Record<string, string[]>;
 };
 
 function createDefaultHiddenNotClonedState(): HiddenNotClonedState {
   return {
     orgs: [],
     repos: {},
+    orgVisibleRepos: {},
   };
 }
 
@@ -27,6 +30,7 @@ function createDefaultHiddenClonedState(): HiddenClonedState {
   return {
     orgs: [],
     repos: {},
+    orgVisibleRepos: {},
   };
 }
 
@@ -113,6 +117,10 @@ class StorageClass {
         repos: Object.fromEntries(
           Object.entries(stored.repos).map(([key, value]) => [key, [...value]]),
         ),
+        orgVisibleRepos: Object.fromEntries(
+          Object.entries(stored.orgVisibleRepos)
+            .map(([key, value]) => [key, [...value]] as [string, string[]]),
+        ),
       };
     },
     set(value: HiddenNotClonedState) {
@@ -127,10 +135,15 @@ class StorageClass {
         additionalKey: 'state',
         defaultValue: createDefaultHiddenClonedState(),
       });
+      const storedOrgVisibleRepos = (stored as unknown as { orgVisibleRepos?: Record<string, string[]> }).orgVisibleRepos ?? {};
       return {
         orgs: [...stored.orgs],
         repos: Object.fromEntries(
           Object.entries(stored.repos).map(([key, value]) => [key, [...value]]),
+        ),
+        orgVisibleRepos: Object.fromEntries(
+          Object.entries(storedOrgVisibleRepos)
+            .map(([key, value]) => [key, [...value]] as [string, string[]]),
         ),
       };
     },

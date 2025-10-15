@@ -38,7 +38,7 @@ _The `*` means that the repository is **dirty**! So it has local changes that ar
 Seamless integration with VS Code's built-in GitHub authentication system - no need for manual tokens or OAuth configuration.
 
 ### 🎯 **Hide/Unhide Organizations and Repositories**
-Full control over your tree view visibility with persistent hidden states for both cloned and not-cloned repositories. Clean up your workspace by hiding repositories you're not actively working on.
+Full control over your tree view visibility with persistent hidden states for both cloned and not-cloned repositories. Clean up your workspace by hiding repositories you're not actively working on, yet still surface specific repositories from a hidden organization—no matter which tree you're browsing.
 
 ### 📊 **Repository Sorting**
 Multiple sorting options to organize your repositories your way:

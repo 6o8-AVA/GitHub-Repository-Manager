@@ -6,6 +6,7 @@ import { Storage } from '../main/storage';
 type HiddenSnapshot = {
   orgs: Set<string>;
   repos: Map<string, Set<string>>;
+  orgVisibleRepos: Map<string, Set<string>>;
 };
 
 function compareStrings(a: string, b: string): number {
@@ -22,10 +23,14 @@ function normalizeState(state: HiddenNotClonedState): HiddenNotClonedState {
   const reposEntries = Object.entries(state.repos)
     .map(([orgLogin, repoUrls]) => [orgLogin, uniqueSorted(repoUrls)] as const)
     .filter(([, urls]) => urls.length > 0);
+  const visibleEntries = Object.entries(state.orgVisibleRepos)
+    .map(([orgLogin, repoUrls]) => [orgLogin, uniqueSorted(repoUrls)] as const)
+    .filter(([, urls]) => urls.length > 0);
 
   return {
     orgs,
     repos: Object.fromEntries(reposEntries),
+    orgVisibleRepos: Object.fromEntries(visibleEntries),
   };
 }
 
@@ -34,6 +39,9 @@ function cloneState(state: HiddenNotClonedState): HiddenNotClonedState {
     orgs: [...state.orgs],
     repos: Object.fromEntries(
       Object.entries(state.repos).map(([orgLogin, repoUrls]) => [orgLogin, [...repoUrls]]),
+    ),
+    orgVisibleRepos: Object.fromEntries(
+      Object.entries(state.orgVisibleRepos).map(([orgLogin, repoUrls]) => [orgLogin, [...repoUrls]]),
     ),
   };
 }
@@ -46,7 +54,7 @@ class HiddenNotClonedStore {
   readonly onDidChange = this.emitter.event;
 
   constructor() {
-    this.state = normalizeState({ orgs: [], repos: {} });
+    this.state = normalizeState({ orgs: [], repos: {}, orgVisibleRepos: {} });
 
     if (Storage.isReady())
       this.initializeFromStorage();
@@ -87,6 +95,10 @@ class HiddenNotClonedStore {
         Object.entries(this.state.repos)
           .map(([orgLogin, repoUrls]) => [orgLogin, new Set(repoUrls)]),
       ),
+      orgVisibleRepos: new Map(
+        Object.entries(this.state.orgVisibleRepos)
+          .map(([orgLogin, repoUrls]) => [orgLogin, new Set(repoUrls)]),
+      ),
     };
   }
 
@@ -99,7 +111,10 @@ class HiddenNotClonedStore {
 
   isOrgHidden(orgLogin: string): boolean {
     this.ensureInitialized();
-    return this.state.orgs.includes(orgLogin);
+    const normalizedLogin = orgLogin.trim();
+    if (!normalizedLogin.length)
+      return false;
+    return this.state.orgs.includes(normalizedLogin);
   }
 
   hideOrg(orgLogin: string): void {
@@ -112,6 +127,7 @@ class HiddenNotClonedStore {
     this.state.orgs.push(normalizedLogin);
     this.state.orgs.sort(compareStrings);
     delete this.state.repos[normalizedLogin];
+    delete this.state.orgVisibleRepos[normalizedLogin];
     this.persist();
   }
 
@@ -127,6 +143,7 @@ class HiddenNotClonedStore {
       return;
     this.state.orgs.splice(index, 1);
     delete this.state.repos[normalizedLogin];
+    delete this.state.orgVisibleRepos[normalizedLogin];
     this.persist();
   }
 
@@ -137,7 +154,17 @@ class HiddenNotClonedStore {
 
   isRepoHidden(orgLogin: string, repoUrl: string): boolean {
     this.ensureInitialized();
-    return this.state.repos[orgLogin]?.includes(repoUrl) ?? false;
+    const normalizedLogin = orgLogin.trim();
+    const normalizedUrl = repoUrl.trim();
+    if (!normalizedLogin.length || !normalizedUrl.length)
+      return false;
+
+    if (this.state.orgs.includes(normalizedLogin)) {
+      const overrides = this.state.orgVisibleRepos[normalizedLogin] ?? [];
+      return !overrides.includes(normalizedUrl);
+    }
+
+    return this.state.repos[normalizedLogin]?.includes(normalizedUrl) ?? false;
   }
 
   hideRepo(orgLogin: string, repoUrl: string): void {
@@ -149,8 +176,21 @@ class HiddenNotClonedStore {
     if (!normalizedLogin.length || !normalizedUrl.length)
       return;
 
-    if (this.isOrgHidden(normalizedLogin))
-      return; // Org hidden overrides repo-level hidden state.
+    if (this.state.orgs.includes(normalizedLogin)) {
+      const overrides = this.state.orgVisibleRepos[normalizedLogin];
+      if (!overrides)
+        return; // Already hidden by virtue of the org being hidden.
+
+      const index = overrides.indexOf(normalizedUrl);
+      if (index === -1)
+        return;
+
+      overrides.splice(index, 1);
+      if (overrides.length === 0)
+        delete this.state.orgVisibleRepos[normalizedLogin];
+      this.persist();
+      return;
+    }
 
     const repos = this.state.repos[normalizedLogin] ?? [];
     if (repos.includes(normalizedUrl))
@@ -170,6 +210,28 @@ class HiddenNotClonedStore {
     const normalizedUrl = repoUrl.trim();
     if (!normalizedLogin.length || !normalizedUrl.length)
       return;
+
+    if (this.state.orgs.includes(normalizedLogin)) {
+      const overrides = this.state.orgVisibleRepos[normalizedLogin] ?? [];
+      if (!overrides.includes(normalizedUrl)) {
+        overrides.push(normalizedUrl);
+        overrides.sort(compareStrings);
+        this.state.orgVisibleRepos[normalizedLogin] = overrides;
+      }
+
+      const repos = this.state.repos[normalizedLogin];
+      if (repos) {
+        const index = repos.indexOf(normalizedUrl);
+        if (index !== -1) {
+          repos.splice(index, 1);
+          if (repos.length === 0)
+            delete this.state.repos[normalizedLogin];
+        }
+      }
+
+      this.persist();
+      return;
+    }
 
     const repos = this.state.repos[normalizedLogin];
     if (!repos)

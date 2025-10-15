@@ -25,6 +25,8 @@ import { sortRepositoriesForCloned } from './sortOrder';
 const CLONED_OTHERS_KEY = '__others__';
 const CLONED_OTHERS_LABEL = 'Others';
 
+type HiddenSnapshot = ReturnType<typeof HiddenCloned.getSnapshot>;
+
 
 export function activateClonedRepos(): void {
   // Open
@@ -142,58 +144,89 @@ function attachOrgMetadata(treeItem: TreeItem, orgLogin: string): TreeItem {
   return Object.assign(treeItem, { orgLogin });
 }
 
-function createVisibleOrgTreeItem(org: { name: string; login: string; clonedRepos: Repository[]; repositories: Repository[]; status: OrgStatus }, snapshot: ReturnType<typeof HiddenCloned.getSnapshot>): TreeItem | undefined {
+function createVisibleOrgTreeItem(org: { name: string; login: string; clonedRepos: Repository[]; repositories: Repository[]; status: OrgStatus }, snapshot: HiddenSnapshot): TreeItem | undefined {
   const hiddenRepos = snapshot.repos.get(org.login) ?? new Set<string>();
-  const sortedRepos = sortRepositoriesForCloned(org.clonedRepos, org.login)
-    .filter((repo) => !hiddenRepos.has(repo.url));
+  const visibleOverrides = snapshot.orgVisibleRepos.get(org.login) ?? new Set<string>();
+  const isOrgHidden = snapshot.orgs.has(org.login);
 
-  const hasClonedRepos = sortedRepos.length > 0;
-
-  if (!hasClonedRepos && org.status === OrgStatus.loaded)
+  if (isOrgHidden && visibleOverrides.size === 0)
     return undefined;
+
+  const sortedRepos = sortRepositoriesForCloned(org.clonedRepos, org.login);
+  const filteredRepos = sortedRepos.filter((repo) => {
+    if (isOrgHidden)
+      return visibleOverrides.has(repo.url);
+    return !hiddenRepos.has(repo.url);
+  });
+
+  const hasVisibleRepos = filteredRepos.length > 0;
+
+  if (!isOrgHidden && !hasVisibleRepos && org.status === OrgStatus.loaded)
+    return undefined;
+
+  const children = hasVisibleRepos
+    ? parseChildren(filteredRepos, { userLogin: org.login, orgLogin: org.login })
+    : [new TreeItem({ label: isOrgHidden ? 'No repositories selected' : getEmptyOrgLabel(org.status) })];
+
+  const contextValue = isOrgHidden
+    ? 'githubRepoMgr.context.partiallyHiddenClonedOrg'
+    : 'githubRepoMgr.context.clonedOrg';
 
   return attachOrgMetadata(
     new TreeItem({
       label: `${org.name}`,
-      children: (org.repositories.length
-        ? parseChildren(sortedRepos, { userLogin: org.login, orgLogin: org.login })
-        : new TreeItem({ label: getEmptyOrgLabel(org.status) })),
+      children,
       collapsibleState: TreeItemCollapsibleState.Collapsed,
-      contextValue: 'githubRepoMgr.context.clonedOrg',
+      contextValue,
+      description: isOrgHidden ? 'hidden org · showing selected repositories' : undefined,
     }),
     org.login,
   );
 }
 
-function createOthersTreeItem(snapshot: ReturnType<typeof HiddenCloned.getSnapshot>): TreeItem | undefined {
-  if (snapshot.orgs.has(CLONED_OTHERS_KEY))
+function createOthersTreeItem(snapshot: HiddenSnapshot): TreeItem | undefined {
+  const isHidden = snapshot.orgs.has(CLONED_OTHERS_KEY);
+  const visibleOverrides = snapshot.orgVisibleRepos.get(CLONED_OTHERS_KEY) ?? new Set<string>();
+
+  if (isHidden && visibleOverrides.size === 0)
     return undefined;
 
   const hiddenRepos = snapshot.repos.get(CLONED_OTHERS_KEY) ?? new Set<string>();
-  const sortedRepos = sortRepositoriesForCloned(User.clonedOtherRepos)
-    .filter((repo) => !hiddenRepos.has(repo.url));
+  const sortedRepos = sortRepositoriesForCloned(User.clonedOtherRepos);
+  const filteredRepos = sortedRepos.filter((repo) => {
+    if (isHidden)
+      return visibleOverrides.has(repo.url);
+    return !hiddenRepos.has(repo.url);
+  });
 
-  if (sortedRepos.length === 0)
+  if (!isHidden && filteredRepos.length === 0)
     return undefined;
 
-  const children = parseChildren(sortedRepos, {
-    userLogin: User.login,
-    includeOwner: false,
-    orgLogin: CLONED_OTHERS_KEY,
-  });
+  const children = filteredRepos.length > 0
+    ? parseChildren(filteredRepos, {
+      userLogin: User.login,
+      includeOwner: false,
+      orgLogin: CLONED_OTHERS_KEY,
+    })
+    : [new TreeItem({ label: 'No repositories selected' })];
+
+  const contextValue = isHidden
+    ? 'githubRepoMgr.context.partiallyHiddenClonedOrg'
+    : 'githubRepoMgr.context.clonedOrg';
 
   return attachOrgMetadata(
     new TreeItem({
       label: CLONED_OTHERS_LABEL,
       children,
       collapsibleState: TreeItemCollapsibleState.Collapsed,
-      contextValue: 'githubRepoMgr.context.clonedOrg',
+      contextValue,
+      description: isHidden ? 'hidden org · showing selected repositories' : undefined,
     }),
     CLONED_OTHERS_KEY,
   );
 }
 
-function createHiddenSectionTreeItem(snapshot: ReturnType<typeof HiddenCloned.getSnapshot>): TreeItem | undefined {
+function createHiddenSectionTreeItem(snapshot: HiddenSnapshot): TreeItem | undefined {
   const hiddenOrgItems: TreeItem[] = [];
 
   // Add completely hidden orgs
@@ -223,23 +256,31 @@ function createHiddenSectionTreeItem(snapshot: ReturnType<typeof HiddenCloned.ge
   });
 }
 
-function createHiddenOrgTreeItem(orgLogin: string, snapshot: ReturnType<typeof HiddenCloned.getSnapshot>): TreeItem | undefined {
+function createHiddenOrgTreeItem(orgLogin: string, snapshot: HiddenSnapshot): TreeItem | undefined {
   const isOthers = orgLogin === CLONED_OTHERS_KEY;
   const org = isOthers ? undefined : User.organizations.find((o) => o.login === orgLogin);
   const orgName = isOthers ? CLONED_OTHERS_LABEL : org?.name ?? orgLogin;
   const isOrgHidden = snapshot.orgs.has(orgLogin);
+  const overrides = snapshot.orgVisibleRepos.get(orgLogin) ?? new Set<string>();
 
-  const repoItems = createHiddenRepoItems({ orgLogin, snapshot, org });
+  const repoItems = createHiddenRepoItems({ orgLogin, snapshot, org, visibleOverrides: overrides });
 
   // Don't show the org if there are no actual repos to display
-  if (!repoItems)
+  if (!isOrgHidden && repoItems.length === 0)
     return undefined;
+
+  const hasOverrides = overrides.size > 0;
+  const children = repoItems.length > 0
+    ? repoItems
+    : [new TreeItem({ label: hasOverrides ? 'No hidden repositories' : 'No repositories found' })];
 
   return attachOrgMetadata(
     new TreeItem({
       label: orgName,
-      description: isOrgHidden ? 'organization hidden' : undefined,
-      children: repoItems,
+      description: isOrgHidden
+        ? (hasOverrides ? 'hidden org · showing selected repositories' : 'hidden org')
+        : undefined,
+      children,
       collapsibleState: TreeItemCollapsibleState.Collapsed,
       contextValue: 'githubRepoMgr.context.hiddenClonedOrg',
     }),
@@ -249,18 +290,21 @@ function createHiddenOrgTreeItem(orgLogin: string, snapshot: ReturnType<typeof H
 
 function createHiddenRepoItems(args: {
   orgLogin: string;
-  snapshot: ReturnType<typeof HiddenCloned.getSnapshot>;
+  snapshot: HiddenSnapshot;
   org?: Organization;
-}): TreeItem[] | undefined {
-  const { orgLogin, snapshot, org } = args;
+  visibleOverrides: Set<string>;
+}): TreeItem[] {
+  const { orgLogin, snapshot, org, visibleOverrides } = args;
   const hiddenRepoUrlsSet = snapshot.repos.get(orgLogin);
   const isOrgHidden = snapshot.orgs.has(orgLogin);
+  const overrideSet = visibleOverrides;
 
   if (orgLogin === CLONED_OTHERS_KEY) {
     const sourceRepos = User.clonedOtherRepos;
 
     if (isOrgHidden) {
-      const sortedRepos = sortRepositoriesForCloned(sourceRepos);
+      const hiddenRepos = sourceRepos.filter((repo) => !overrideSet.has(repo.url));
+      const sortedRepos = sortRepositoriesForCloned(hiddenRepos);
       const repos = parseChildren(sortedRepos, {
         userLogin: User.login,
         includeOwner: false,
@@ -268,17 +312,17 @@ function createHiddenRepoItems(args: {
         commandName: 'githubRepoMgr.commands.clonedRepos.open',
         orgLogin: CLONED_OTHERS_KEY,
       });
-      return repos.length > 0 ? repos : undefined;
+      return repos;
     }
 
     if (!hiddenRepoUrlsSet || hiddenRepoUrlsSet.size === 0)
-      return undefined;
+      return [];
 
-    const hiddenRepos = sourceRepos.filter((repo) => hiddenRepoUrlsSet.has(repo.url));
+    const hiddenRepos = sourceRepos.filter((repo) => hiddenRepoUrlsSet.has(repo.url) && !overrideSet.has(repo.url));
     const sortedRepos = sortRepositoriesForCloned(hiddenRepos);
 
     if (sortedRepos.length === 0)
-      return undefined;
+      return [];
 
     return parseChildren(sortedRepos, {
       userLogin: User.login,
@@ -290,27 +334,28 @@ function createHiddenRepoItems(args: {
   }
 
   if (!org)
-    return undefined; // Don't show org if not found
+    return []; // Don't show org if not found
 
   if (isOrgHidden) {
-    const sortedRepos = sortRepositoriesForCloned(org.clonedRepos, org.login);
+    const hiddenRepos = org.clonedRepos.filter((repo) => !overrideSet.has(repo.url));
+    const sortedRepos = sortRepositoriesForCloned(hiddenRepos, org.login);
     const repos = parseChildren(sortedRepos, {
       userLogin: org.login,
       contextValue: 'githubRepoMgr.context.hiddenClonedRepo',
       commandName: 'githubRepoMgr.commands.clonedRepos.open',
       orgLogin: org.login,
     });
-    return repos.length > 0 ? repos : undefined;
+    return repos;
   }
 
   if (!hiddenRepoUrlsSet || hiddenRepoUrlsSet.size === 0)
-    return undefined; // Don't show org if no hidden repos
+    return []; // Don't show org if no hidden repos
 
-  const hiddenRepos = org.clonedRepos.filter((repo) => hiddenRepoUrlsSet.has(repo.url));
+  const hiddenRepos = org.clonedRepos.filter((repo) => hiddenRepoUrlsSet.has(repo.url) && !overrideSet.has(repo.url));
   const sortedRepos = sortRepositoriesForCloned(hiddenRepos, org.login);
 
   if (sortedRepos.length === 0)
-    return undefined; // Don't show org if hidden repos not found
+    return []; // Don't show org if hidden repos not found
 
   return parseChildren(sortedRepos, {
     userLogin: org.login,
@@ -337,10 +382,12 @@ export function getClonedTreeItem(): TreeItem {
 
   const snapshot = HiddenCloned.getSnapshot();
 
-  const visibleOrgs = User.organizations
-    .filter((org) => !snapshot.orgs.has(org.login))
-    .map((org) => createVisibleOrgTreeItem(org, snapshot))
-    .filter((orgTreeItem): orgTreeItem is TreeItem => Boolean(orgTreeItem));
+  const visibleOrgs: TreeItem[] = [];
+  User.organizations.forEach((org) => {
+    const item = createVisibleOrgTreeItem(org, snapshot);
+    if (item)
+      visibleOrgs.push(item);
+  });
 
   const othersTreeItem = createOthersTreeItem(snapshot);
   const hiddenSection = createHiddenSectionTreeItem(snapshot);

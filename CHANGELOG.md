@@ -1,5 +1,13 @@
 # Change Log : GitHub Repository Manager
 
+## 1.6.5 - 2025-10-14
+
+### Improvements
+
+- Hidden organizations in both the **Cloned** and **Not Cloned** trees can now surface selected repositories while keeping the rest hidden.
+- Updated hidden section messaging so you can quickly tell when an organization is hidden but exposing specific repositories.
+- Persistence upgraded to remember per-organization visibility overrides across both trees.
+
 ## 1.6.4 - 2025-10-14
 
 ### New Features

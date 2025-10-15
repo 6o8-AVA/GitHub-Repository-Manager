@@ -51,9 +51,12 @@ export function activateNotClonedRepos(): void {
 export function getNotClonedTreeItem(): TreeItem {
   const snapshot = HiddenNotCloned.getSnapshot();
 
-  const visibleOrgs: TreeItem[] = User.organizations
-    .filter((org) => !snapshot.orgs.has(org.login))
-    .map((org) => createVisibleOrgTreeItem(org, snapshot));
+  const visibleOrgs: TreeItem[] = [];
+  User.organizations.forEach((org) => {
+    const item = createVisibleOrgTreeItem(org, snapshot);
+    if (item)
+      visibleOrgs.push(item);
+  });
 
   const hiddenSection = createHiddenSectionTreeItem(snapshot);
 
@@ -71,7 +74,7 @@ export function getNotClonedTreeItem(): TreeItem {
 type OrgTreeItem = TreeItem & {
   orgLogin: string;
   organization?: Organization;
-  hiddenMode: 'visible' | 'hiddenOrg' | 'hiddenRepos';
+  hiddenMode: 'visible' | 'hiddenOrg' | 'hiddenRepos' | 'hiddenOrgVisible';
 };
 
 type RepoTreeItem = (RepoItem | TreeItem) & {
@@ -103,26 +106,42 @@ function getTreeItemLabel(item: TreeItem): string {
 
 type HiddenSnapshot = ReturnType<typeof HiddenNotCloned.getSnapshot>;
 
-function createVisibleOrgTreeItem(org: Organization, snapshot: HiddenSnapshot): OrgTreeItem {
+function createVisibleOrgTreeItem(org: Organization, snapshot: HiddenSnapshot): OrgTreeItem | undefined {
   const hiddenRepos = snapshot.repos.get(org.login) ?? new Set<string>();
-  const sortedRepos = sortRepositoriesForOrganization(org.notClonedRepos)
-    .filter((repo) => !hiddenRepos.has(repo.url));
+  const visibleOverrides = snapshot.orgVisibleRepos.get(org.login) ?? new Set<string>();
+  const isOrgHidden = snapshot.orgs.has(org.login);
 
-  const children = (sortedRepos.length > 0
-    ? sortedRepos.map((repo) => createVisibleRepoItem(org, repo))
-    : [new TreeItem({ label: getEmptyOrgLabel(org.status) })]);
+  if (isOrgHidden && visibleOverrides.size === 0)
+    return undefined;
+
+  const sortedRepos = sortRepositoriesForOrganization(org.notClonedRepos);
+  const filteredRepos = sortedRepos.filter((repo) => {
+    if (isOrgHidden)
+      return visibleOverrides.has(repo.url);
+    return !hiddenRepos.has(repo.url);
+  });
+
+  const hasVisibleRepos = filteredRepos.length > 0;
+  const children = hasVisibleRepos
+    ? filteredRepos.map((repo) => createVisibleRepoItem(org, repo))
+    : [new TreeItem({ label: isOrgHidden ? 'No repositories selected' : getEmptyOrgLabel(org.status) })];
+
+  const contextValue = isOrgHidden
+    ? 'githubRepoMgr.context.partiallyHiddenNotClonedOrg'
+    : 'githubRepoMgr.context.notClonedOrg';
 
   const item = new TreeItem({
     label: `${org.name}`,
     children,
     collapsibleState: vscode.TreeItemCollapsibleState.Collapsed,
-    contextValue: 'githubRepoMgr.context.notClonedOrg',
+    contextValue,
+    description: isOrgHidden ? 'hidden org · showing selected repositories' : undefined,
   });
 
   return attachOrgMetadata(item, {
     orgLogin: org.login,
     organization: org,
-    hiddenMode: 'visible',
+    hiddenMode: isOrgHidden ? 'hiddenOrgVisible' : 'visible',
   });
 }
 
@@ -148,23 +167,30 @@ function createHiddenSectionTreeItem(snapshot: HiddenSnapshot): TreeItem | undef
   const hiddenOrgLogins = Array.from(snapshot.orgs);
   hiddenOrgLogins.forEach((orgLogin) => {
     const org = User.organizations.find((candidate) => candidate.login === orgLogin);
+    const overrides = snapshot.orgVisibleRepos.get(orgLogin) ?? new Set<string>();
     hiddenOrgItems.push(createHiddenOrgTreeItem({
       org,
       orgLogin,
       hiddenMode: 'hiddenOrg',
       repoUrls: undefined,
+      visibleOverrides: overrides,
     }));
   });
 
   for (const [orgLogin, repoUrls] of snapshot.repos.entries()) {
+    const overrides = snapshot.orgVisibleRepos.get(orgLogin) ?? new Set<string>();
     if (snapshot.orgs.has(orgLogin) || repoUrls.size === 0)
       continue;
     const org = User.organizations.find((candidate) => candidate.login === orgLogin);
+    const filteredUrls = Array.from(repoUrls).filter((url) => !overrides.has(url));
+    if (filteredUrls.length === 0)
+      continue;
     hiddenOrgItems.push(createHiddenOrgTreeItem({
       org,
       orgLogin,
       hiddenMode: 'hiddenRepos',
-      repoUrls: Array.from(repoUrls),
+      repoUrls: filteredUrls,
+      visibleOverrides: overrides,
     }));
   }
 
@@ -186,18 +212,24 @@ type CreateHiddenOrgArgs = {
   orgLogin: string;
   hiddenMode: OrgTreeItem['hiddenMode'];
   repoUrls?: string[];
+  visibleOverrides?: Set<string>;
 };
 
-function createHiddenOrgTreeItem({ org, orgLogin, hiddenMode, repoUrls }: CreateHiddenOrgArgs): OrgTreeItem {
+function createHiddenOrgTreeItem({ org, orgLogin, hiddenMode, repoUrls, visibleOverrides }: CreateHiddenOrgArgs): OrgTreeItem {
   const label = org?.name ?? orgLogin;
-  const repoItems = createHiddenRepoItems({ org, orgLogin, hiddenMode, repoUrls });
+  const repoItems = createHiddenRepoItems({ org, orgLogin, hiddenMode, repoUrls, visibleOverrides });
+  const hasOverrides = (visibleOverrides?.size ?? 0) > 0;
 
   const item = new TreeItem({
     label,
     contextValue: 'githubRepoMgr.context.hiddenNotClonedOrg',
-    description: hiddenMode === 'hiddenOrg' ? 'organization hidden' : undefined,
+    description: hiddenMode === 'hiddenOrg'
+      ? (hasOverrides ? 'organization hidden · showing selected repositories' : 'organization hidden')
+      : undefined,
     collapsibleState: vscode.TreeItemCollapsibleState.Collapsed,
-    children: repoItems.length > 0 ? repoItems : [new TreeItem({ label: 'No repositories found' })],
+    children: repoItems.length > 0
+      ? repoItems
+      : [new TreeItem({ label: hasOverrides ? 'No hidden repositories' : 'No repositories found' })],
   });
 
   return attachOrgMetadata(item, {
@@ -212,17 +244,21 @@ type CreateHiddenRepoItemsArgs = {
   orgLogin: string;
   hiddenMode: OrgTreeItem['hiddenMode'];
   repoUrls?: string[];
+  visibleOverrides?: Set<string>;
 };
 
-function createHiddenRepoItems({ org, orgLogin, hiddenMode, repoUrls }: CreateHiddenRepoItemsArgs): RepoTreeItem[] {
+function createHiddenRepoItems({ org, orgLogin, hiddenMode, repoUrls, visibleOverrides }: CreateHiddenRepoItemsArgs): RepoTreeItem[] {
+  const overrideSet = visibleOverrides ?? new Set<string>();
+
   if (hiddenMode === 'hiddenOrg') {
     if (!org)
       return [];
-    const sorted = sortRepositoriesForOrganization(org.notClonedRepos);
+    const sorted = sortRepositoriesForOrganization(org.notClonedRepos)
+      .filter((repo) => !overrideSet.has(repo.url));
     return sorted.map((repo) => createHiddenRepoItem(orgLogin, repo));
   }
 
-  const urls = repoUrls ?? [];
+  const urls = (repoUrls ?? []).filter((url) => !overrideSet.has(url));
   if (urls.length === 0)
     return [];
 
