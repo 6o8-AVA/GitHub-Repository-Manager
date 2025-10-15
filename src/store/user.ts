@@ -2,6 +2,7 @@ import { Octokit } from '@octokit/rest';
 import gitUrlParse from 'git-url-parse';
 import vscode from 'vscode';
 import { getDirtiness } from '../commands/git/dirtiness/dirtiness';
+import { extractRepositoryFromData, repoInfosQuery } from '../commands/github/getOrgRepos';
 import { getUser } from '../commands/github/getUserData';
 import type { DirWithGitUrl } from '../commands/searchClonedRepos/searchClonedRepos';
 import { getLocalReposPathAndUrl } from '../commands/searchClonedRepos/searchClonedRepos';
@@ -59,7 +60,7 @@ class UserClass {
   repositoriesState: RepositoriesState = RepositoriesState.none;
   clonedRepos: Repository[] = [];
   /** Repositories that are cloned but not from user / user's org */
-  clonedOtherRepos: LocalRepository[] = [];
+  clonedOtherRepos: Repository[] = [];
 
   /** Returns the orgs that the user can create new repositories.
    * As it uses this.organizations, it includes the user Organization. */
@@ -178,30 +179,50 @@ class UserClass {
     this.setRepositoriesState(RepositoriesState.fetching);
     await Promise.all(this.organizations.map((org) => org.loadOrgRepos({ localRepos })));
 
-    // Get dirtyness status of local repos
-    this.clonedRepos = this.organizations.map((org) => org.clonedRepos).flat();
-    this.clonedOtherRepos = localRepos
-    // Remove repos that are on Cloned tree
-      .filter((r) => !this.clonedRepos.find((c) => c.localPath === r.dirPath))
-      .map((r) => ({
-        name: gitUrlParse(r.gitUrl).name,
-        ownerLogin: gitUrlParse(r.gitUrl).owner,
+    this.clonedRepos = this.organizations.flatMap((org) => org.clonedRepos);
+
+    const otherRepos = localRepos
+      .filter((r) => !this.clonedRepos.some((c) => c.localPath === r.dirPath));
+
+    this.clonedOtherRepos = await Promise.all(otherRepos.map(async (r) => {
+      const parsed = gitUrlParse(r.gitUrl);
+
+      const remoteRepo = await fetchRepositoryMetadata(parsed.owner, parsed.name).catch(() => undefined);
+
+      if (remoteRepo) {
+        remoteRepo.localPath = r.dirPath;
+        remoteRepo.dirty = 'unknown';
+        return remoteRepo;
+      }
+
+      const fallbackRepo: LocalRepository = {
+        name: parsed.name,
+        ownerLogin: parsed.owner,
         url: r.gitUrl,
         localPath: r.dirPath,
         type: 'local',
-      }));
+        dirty: 'unknown',
+      };
 
-    // To show unknown dirtiness or at least the not-cloned repos, if none is cloned.
+      return fallbackRepo;
+    }));
+
     this.setRepositoriesState(RepositoriesState.partial);
-    // Updates dirty forms from time to time while not done
     const interval = setInterval(() => { this.informSubscribers('repos'); }, 250);
 
-    // Check dirty of orgs' local repos
-    await Promise.all(this.organizations.map((org) => Promise.all(
-      org.clonedRepos.map(async (localRepo) => {
-        localRepo.dirty = await getDirtiness(localRepo.localPath!);
+    await Promise.all([
+      ...this.organizations.map((org) => Promise.all(
+        org.clonedRepos.map(async (localRepo) => {
+          localRepo.dirty = await getDirtiness(localRepo.localPath!);
+        }),
+      )),
+      Promise.all(this.clonedOtherRepos.map(async (repo) => {
+        if (!repo.localPath)
+          return;
+        repo.dirty = await getDirtiness(repo.localPath);
       })),
-    ));
+    ]);
+
     clearInterval(interval);
 
     this.setRepositoriesState(RepositoriesState.fullyLoaded);
@@ -226,3 +247,30 @@ class UserClass {
 
 export const User = new UserClass();
 export let octokit: Octokit | undefined = undefined;
+
+const singleRepositoryQuery = `
+query getRepositoryMetadata($owner: String!, $name: String!) {
+  repository(owner: $owner, name: $name) {
+${repoInfosQuery}
+  }
+}`;
+
+async function fetchRepositoryMetadata(owner: string, name: string): Promise<Repository | undefined> {
+  if (!octokit)
+    return undefined;
+
+  try {
+    const response = await octokit.graphql<{ repository: any }>(singleRepositoryQuery, {
+      owner,
+      name,
+    });
+
+    if (!response.repository)
+      return undefined;
+
+    return extractRepositoryFromData(response.repository);
+  } catch (error) {
+    console.warn('Failed to fetch repository metadata for', `${owner}/${name}`, error);
+    return undefined;
+  }
+}

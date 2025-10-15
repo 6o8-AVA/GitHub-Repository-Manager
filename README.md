@@ -34,6 +34,9 @@ _The `*` means that the repository is **dirty**! So it has local changes that ar
 
 ## Key Features
 
+### 🔐 **Native VS Code GitHub Authentication**
+Seamless integration with VS Code's built-in GitHub authentication system - no need for manual tokens or OAuth configuration.
+
 ### 🎯 **Hide/Unhide Organizations and Repositories**
 Full control over your tree view visibility with persistent hidden states for both cloned and not-cloned repositories. Clean up your workspace by hiding repositories you're not actively working on.
 
@@ -56,20 +59,20 @@ Keeps your workspace clean and focused on active projects by automatically filte
 ### 🔍 **Dirty Repository Indicator**
 See at a glance which repositories have uncommitted local changes with the `*` indicator - keep track of your work-in-progress across all repositories.
 
-### 🔐 **Native VS Code GitHub Authentication**
-Seamless integration with VS Code's built-in GitHub authentication system - no need for manual tokens or OAuth configuration.
-
 ### ➕ **Create Repositories Directly in VS Code**
 Create new GitHub repositories for your personal account or organizations you belong to without leaving your editor.
+
+### 🔎 **Smart Cloned Repository Detection**
+Automatically discovers and lists all your cloned GitHub repositories from your configured clone directory, supporting both HTTPS and SSH remotes.
+
+### � **Managed Clone Directory**
+Quickly clone repositories into your configured default directory using the new guided command. The extension now validates and creates the destination folders automatically so your clones never fail because of a missing path.
 
 ### 🚀 **Publish to GitHub**
 One-click publish functionality that creates a GitHub repository and pushes your current project in a single flow - whether your project has Git initialized or not.
 
 ### 🏢 **Full Organization Support**
 View, manage, and create repositories for organizations you're a member of, with proper permission handling.
-
-### 🔎 **Smart Cloned Repository Detection**
-Automatically discovers and lists all your cloned GitHub repositories from your configured clone directory, supporting both HTTPS and SSH remotes.
 
 ### 🎨 **Visual Repository Icons**
 Color-coded repository icons provide quick visual distinction in the tree view, making navigation easier.
@@ -78,7 +81,7 @@ Color-coded repository icons provide quick visual distinction in the tree view, 
 Delete cloned repositories directly from the context menu with confirmation and dirty state warnings to prevent accidental data loss.
 
 ### 📂 **Support for All Repository Types**
-Includes "Cloned - Others" tree for managing local repositories that aren't from your account or organizations.
+Includes "Others" tree for managing local repositories that aren't from your account or organizations.
 
 <h1 align="center">
 Guide

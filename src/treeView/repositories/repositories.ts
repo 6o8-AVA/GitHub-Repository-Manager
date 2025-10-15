@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { uiCloneManaged } from '../../commandsUi/uiCloneManaged';
 import { uiCreateRepo } from '../../commandsUi/uiCreateRepo';
 import { uiPublish } from '../../commandsUi/uiPublish/uiPublish';
 import { Configs } from '../../main/configs';
@@ -6,7 +7,7 @@ import { HiddenCloned } from '../../store/hiddenCloned';
 import { HiddenNotCloned } from '../../store/hiddenNotCloned';
 import { RepositoriesState, User } from '../../store/user';
 import { BaseTreeDataProvider, TreeItem } from '../treeViewBase';
-import { activateClonedRepos, getClonedOthersTreeItem, getClonedTreeItem } from './clonedRepos';
+import { activateClonedRepos, getClonedTreeItem } from './clonedRepos';
 import { activateNotClonedRepos, getNotClonedTreeItem } from './notClonedRepos';
 import type { RepoItem } from './repoItem';
 import {
@@ -63,6 +64,9 @@ export function activateTreeViewRepositories(): void {
     await selectSortOrder('alphabetical');
   });
 
+  // Clone into managed directory
+  vscode.commands.registerCommand('githubRepoMgr.commands.repos.cloneManaged', () => uiCloneManaged());
+
   // Create Repo
   vscode.commands.registerCommand('githubRepoMgr.commands.repos.createRepo', () => uiCreateRepo());
 
@@ -102,12 +106,8 @@ class TreeDataProvider extends BaseTreeDataProvider {
           label: 'Loading...',
         });
       case RepositoriesState.partial:
-      case RepositoriesState.fullyLoaded: {
-        const clonedFromOthers = User.clonedOtherRepos.length
-          ? [getClonedOthersTreeItem()]
-          : [];
-        return [getClonedTreeItem(), ...clonedFromOthers, getNotClonedTreeItem()];
-      }
+      case RepositoriesState.fullyLoaded:
+        return [getClonedTreeItem(), getNotClonedTreeItem()];
     }
   }
 

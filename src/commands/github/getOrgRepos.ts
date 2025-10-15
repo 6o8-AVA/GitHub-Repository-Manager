@@ -6,6 +6,13 @@ import { getOctokitErrorMessage } from './getOctokitErrorMessage';
 
 
 export function extractRepositoryFromData(data: any): Repository {
+  const defaultBranchCommit = data.defaultBranchRef?.target;
+  const defaultBranchCommittedAt: string | undefined = defaultBranchCommit?.committedDate ?? defaultBranchCommit?.authoredDate;
+  const defaultBranchPushedAt: string | undefined = defaultBranchCommit?.pushedDate ?? defaultBranchCommit?.committedDate;
+
+  const updatedAtIso: string | undefined = defaultBranchPushedAt ?? data.pushedAt ?? data.updatedAt ?? defaultBranchCommittedAt;
+  const updatedAtDate = updatedAtIso ? new Date(updatedAtIso) : new Date(0);
+
   return {
     type: 'remote',
     name: data.name,
@@ -25,7 +32,7 @@ export function extractRepositoryFromData(data: any): Repository {
     parentRepoOwnerLogin: data.parent?.owner.login,
 
     createdAt: new Date(data.createdAt),
-    updatedAt: new Date(data.updatedAt),
+    updatedAt: updatedAtDate,
   };
 }
 
@@ -52,8 +59,19 @@ parent {
     login
   }
 }
+defaultBranchRef {
+  name
+  target {
+    ... on Commit {
+      committedDate
+      pushedDate
+      authoredDate
+    }
+  }
+}
 createdAt
 updatedAt
+pushedAt
 `;
 
 export async function getOrgRepos(login: string): Promise<Repository[]> {

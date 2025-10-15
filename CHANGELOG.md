@@ -1,5 +1,18 @@
 # Change Log : GitHub Repository Manager
 
+## 1.6.4 - 2025-10-14
+
+### New Features
+
+- Added a **Clone into Managed Directory** command that guides you through cloning into the configured default directory, automatically creating the target folder when it is missing.
+
+### Improvements
+
+- Adds **Cloned / Others** tree to surface the same metadata as primary repositories, including dirtiness indicators and remote details.
+- Updated repository timestamps to match GitHub by reading the latest commit on the default branch.
+- Aligned context menu actions so hidden "Others" repositories retain the same local open and navigation commands as visible ones.
+- Hardened the managed clone workflow to avoid failures when the destination folder hierarchy does not exist.
+
 ## 1.6.3 - 2025-10-13
 
 README updated to be more clear about features and cleanup to remove original author's promotional content.
@@ -114,7 +127,7 @@ This version represents a fork of the original extension, maintained and publish
 
 - Removed excess keywords in package.json
 
-# 1.0.0 - 2021/07/23
+## 1.0.0 - 2021/07/23
 
 - Added the new VS Code GitHub Authentication. (!)
 - Added dirty repository indicator ([#16](https://github.com/SrBrahma/GitHub-Repository-Manager/issues/16)). Being ok and validated, later I will add a 'Delete' context menu option to non-dirty cloned repos. Please report errors.

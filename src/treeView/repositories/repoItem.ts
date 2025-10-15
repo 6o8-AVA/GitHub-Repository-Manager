@@ -10,7 +10,8 @@ import { TreeItem } from '../treeViewBase';
 // TODO: Use GitHub icons (must resize them)
 // we may use repo-cloned as icon for template.
 function getIcon(repo: Repository): vscode.ThemeIcon | undefined {
-  if (repo.type === 'local') return; // No icon if local (sure?)
+  if (repo.type === 'local')
+    return new vscode.ThemeIcon('repo');
 
   const args = ((): [name: string, color: string | undefined] => {
     if (repo.isPrivate)
